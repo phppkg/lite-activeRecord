@@ -9,16 +9,21 @@
 namespace SimpleAR\Model;
 
 use Inhere\Library\Collections\SimpleCollection;
-use Inhere\Library\Types;
+use Inhere\Library\Type;
 use Inhere\Validate\ValidationTrait;
 
 /**
- * Class BaseModel
+ * Class Model
  * @package SimpleAR\Model
  */
-abstract class BaseModel extends SimpleCollection
+class Model extends SimpleCollection
 {
     use ValidationTrait;
+
+    /**
+     * @var array
+     */
+    private static $_models = [];
 
     /**
      * @var bool
@@ -32,14 +37,10 @@ abstract class BaseModel extends SimpleCollection
     protected $onlySaveSafeData = true;
 
     /**
-     * Validation class name
-     */
-    //protected $validateHandler = '\inhere\validate\Validation';
-
-    /**
+     * The columns of the model
      * @var array
      */
-    private static $_models = [];
+    private $columns;
 
     /**
      * @param string $class
@@ -72,22 +73,30 @@ abstract class BaseModel extends SimpleCollection
     }
 
     /**
+     * @param array $items
+     */
+    public function __construct(array $items = [])
+    {
+        parent::__construct($items);
+
+        $this->columns = $this->columns();
+    }
+
+    /**
      * define model field list
-     * in sub class:
-     * ```
-     * public function columns()
-     * {
-     *    return [
-     *          // column => type
-     *          'id'          => 'int',
-     *          'title'       => 'string',
-     *          'createTime'  => 'int',
-     *    ];
-     * }
-     * ```
      * @return array
      */
-    abstract public function columns();
+    public function columns()
+    {
+        return [
+    /*
+           // column => type
+           'id'          => 'int',
+           'title'       => 'string',
+           'createTime'  => 'int',
+     */
+        ];
+    }
 
     /**
      * {@inheritDoc}
@@ -109,15 +118,25 @@ abstract class BaseModel extends SimpleCollection
     public function set($column, $value)
     {
         // belong to the model.
-        if (isset($this->columns()[$column])) {
-            $type = $this->columns()[$column];
-
-            if ($type === Types::T_INT) {
-                $value = (int)$value;
-            }
+        if (isset($this->columns[$column])) {
+            $value = $this->convertType($value, $this->columns[$column]);
         }
 
         return parent::set($column, $value);
+    }
+
+    /**
+     * @param mixed $value
+     * @param type $type
+     * @return int
+     */
+    protected function convertType($value, $type)
+    {
+        if ($type === Type::INT) {
+            $value = (int)$value;
+        }
+
+        return $value;
     }
 
     /**
@@ -129,12 +148,21 @@ abstract class BaseModel extends SimpleCollection
         $data = [];
 
         foreach ($source as $col => $val) {
-            if (isset($this->columns()[$col])) {
+            if (isset($this->columns[$col])) {
                 $data[$col] = $val;
             }
         }
 
         return $data;
+    }
+
+    /**
+     * @param string $column
+     * @return bool
+     */
+    public function hasColumn(string $column)
+    {
+        return isset($this->columns[$column]);
     }
 
     /**
@@ -151,5 +179,13 @@ abstract class BaseModel extends SimpleCollection
     public function isOnlySaveSafeData(): bool
     {
         return $this->onlySaveSafeData;
+    }
+
+    /**
+     * @return array
+     */
+    public function getColumns(): array
+    {
+        return $this->columns;
     }
 }

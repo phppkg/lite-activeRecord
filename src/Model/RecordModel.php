@@ -20,7 +20,7 @@ use Windwalker\Query\Query;
  * Class RecordModel
  * @package SimpleAR\Model
  */
-abstract class RecordModel extends BaseModel
+abstract class RecordModel extends Model
 {
     use RecordModelExtraTrait;
 
@@ -119,7 +119,7 @@ abstract class RecordModel extends BaseModel
 
         $this->scene = trim($scene);
 
-        if (!$this->columns()) {
+        if (!$this->getColumns()) {
             throw new InvalidConfigException('Must define method columns() and cannot be empty.');
         }
 
@@ -150,12 +150,12 @@ abstract class RecordModel extends BaseModel
         // default is current class name
         $className = lcfirst(basename(str_replace('\\', '/', static::class)));
 
-        // '@@' -- is table prefix placeholder
-        // return '@@articles';
+        // '{@pfx}' -- is table prefix placeholder
+        // return '{@pfx}articles';
         // if no table prefix
         // return 'articles';
 
-        return '{pfx}' . $className;
+        return '{@pfx}' . $className;
     }
 
     /**
@@ -171,10 +171,7 @@ abstract class RecordModel extends BaseModel
      * the database driver instance
      * @return AbstractDriver
      */
-    public static function getDb()
-    {
-        return \Slim::get('db');
-    }
+    abstract public static function getDb();
 
     /**
      * init query
@@ -564,6 +561,33 @@ abstract class RecordModel extends BaseModel
         return $this->_backup[$column] ?? null;
     }
 
+    /**
+     * @return array
+     */
+    public function getChanges(): array
+    {
+        return $this->changes;
+    }
+
+    /**
+     * @param array $changes
+     */
+    public function setChanges(array $changes)
+    {
+        $this->changes = $changes;
+    }
+
+    /**
+     * @param string $column
+     * @param mixed $value
+     */
+    public function setChange($column, $value)
+    {
+        if ($this->hasColumn($column)) {
+            $this->changes[$column] = $value;
+        }
+    }
+
     /***********************************************************************************
      * helper method
      ***********************************************************************************/
@@ -580,4 +604,5 @@ abstract class RecordModel extends BaseModel
     {
         return ModelHelper::applyQueryOptions($options, $query);
     }
+
 }
