@@ -6,7 +6,7 @@
  * Time: 23:35
  */
 
-namespace SimpleAR\Model;
+namespace SimpleAR;
 
 use Inhere\Library\Collections\SimpleCollection;
 use Inhere\Library\Type;

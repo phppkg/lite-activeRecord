@@ -6,14 +6,14 @@
  * Time: 下午4:13
  */
 
-namespace SimpleAR\Model;
+namespace SimpleAR;
 
 use SimpleAR\Database\AbstractDriver;
 use SimpleAR\Helpers\ModelHelper;
 
 /**
  * Class RecordModelExtraTrait
- * @package SimpleAR\Model
+ * @package SimpleAR
  * @method static RecordModel load()
  * @method static AbstractDriver getDb()
  * @method static AbstractDriver setQuery()
