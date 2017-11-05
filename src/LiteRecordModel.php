@@ -12,15 +12,13 @@ use Inhere\Exceptions\InvalidArgumentException;
 use Inhere\Exceptions\InvalidConfigException;
 use Inhere\Exceptions\UnknownMethodException;
 use Inhere\Library\Helpers\Arr;
-use SimpleAR\Database\AbstractDriver;
-use SimpleAR\Helpers\ModelHelper;
-use Windwalker\Query\Query;
+use Inhere\Library\Components\DatabaseClient;
 
 /**
  * Class RecordModel
  * @package SimpleAR
  */
-abstract class RecordModel extends Model
+abstract class LiteRecordModel extends Model
 {
     // use RecordModelExtraTrait;
 
@@ -95,7 +93,7 @@ abstract class RecordModel extends Model
      * Are you allowed to insert the primary key?
      * @var boolean
      */
-    protected $allowInsertPk = false;
+    protected $allowInsertPk = true;
 
     /**
      * @param $data
@@ -148,14 +146,18 @@ abstract class RecordModel extends Model
     public static function tableName()
     {
         // default is current class name
-        $className = lcfirst(basename(str_replace('\\', '/', static::class)));
+        $name = lcfirst(basename(str_replace('\\', '/', static::class)));
+
+        if (\substr($name, -5) === 'Model') {
+            $name = substr($name, 0, -5);
+        }
 
         // '{@pfx}' -- is table prefix placeholder
         // return '{@pfx}articles';
         // if no table prefix
         // return 'articles';
 
-        return '{@pfx}' . $className;
+        return '{@pfx}' . $name;
     }
 
     /**
@@ -171,7 +173,7 @@ abstract class RecordModel extends Model
 
     /**
      * the database driver instance
-     * @return AbstractDriver
+     * @return DatabaseClient
      */
     abstract public static function getDb();
 
@@ -222,13 +224,13 @@ abstract class RecordModel extends Model
      */
     public static function findOne($wheres, string $select = '*', array $options = [])
     {
-        $options = array_merge(static::$defaultOptions, (array)$options);
+        $options = array_merge(static::$defaultOptions, $options);
 
         if ($isModel = $options['fetchType'] === 'model') {
-            $options['fetchType'] = static::class;
+            $options['class'] = static::class;
         }
 
-        $model = static::getDb()->findOne(self::$tableName, $wheres, $select, $options);
+        $model = static::getDb()->findOne(self::getTableName(), $wheres, $select, $options);
 
         // use data model
         if ($model && $isModel) {
@@ -247,39 +249,30 @@ abstract class RecordModel extends Model
      */
     public static function findAll($wheres, string $select = '*', array $options = [])
     {
-        // as select
-        if (is_string($options)) {
-            $options = [
-                'select' => $options
-            ];
+        $options = array_merge(static::$defaultOptions, ['fetchType' => 'assoc'], $options);
+
+        if ($options['fetchType'] === 'model') {
+            $options['class'] = static::class;
         }
 
-        $options = array_merge(static::$defaultOptions, ['class' => 'assoc'], (array)$options);
-        $indexKey = Arr::remove($options, 'indexKey');
-        $class = $options['class'] === 'model' ? static::class : $options['class'];
-
-        unset($options['indexKey'], $options['class']);
-
-        $query = self::applyAppendOptions($options, static::query($where));
-
-        return static::setQuery($query)->loadAll($indexKey, $class);
+        return static::getDb()->findAll(self::getTableName(), $wheres, $select, $options);
     }
+
+    /***********************************************************************************
+     * create/update operation
+     ***********************************************************************************/
 
     /**
      * @param array $updateColumns
      * @param bool|false $updateNulls
      * @return bool
      */
-    public function save(array $updateColumns = [])
+    public function save(array $updateColumns = [], $updateNulls = false)
     {
-        $this->isNew() ? $this->insert() : $this->update($updateColumns);
+        $this->isNew() ? $this->insert() : $this->update($updateColumns, $updateNulls);
 
         return !$this->hasError();
     }
-
-    /***********************************************************************************
-     * create operation
-     ***********************************************************************************/
 
     /**
      * @return static
@@ -299,7 +292,7 @@ abstract class RecordModel extends Model
         }
 
         // when insert successful.
-        if ($pkValue = static::getDb()->insert(self::$tableName, $this->getColumnsData())) {
+        if ($pkValue = static::getDb()->insert(self::getTableName(), $this->getColumnsData())) {
             $this->set(static::$pkName, $pkValue);
             $this->setLoadFromDb();
 
@@ -310,26 +303,23 @@ abstract class RecordModel extends Model
         return $this;
     }
 
-    /***********************************************************************************
-     * update operation
-     ***********************************************************************************/
-
     /**
      * update by primary key
      * @param array $updateColumns only update some columns
      * @return static
      * @throws InvalidArgumentException
      */
-    public function update(array $updateColumns = [])
+    public function update(array $updateColumns = [], $updateNulls = false)
     {
         // check primary key
         if (!$pkValue = $this->pkValue()) {
-            throw new InvalidArgumentException('Must be require primary column of the method update()');
+            throw new InvalidArgumentException('The primary value is cannot be empty for update the model');
         }
 
         $this->beforeUpdate();
         $this->beforeSave();
 
+        $result = true;
         $pkName = static::$pkName;
         $validateColumns = $updateColumns;
 
@@ -347,7 +337,7 @@ abstract class RecordModel extends Model
         if ($this->onlyUpdateChanged) {
             // Exclude the column if it value not change
             $data = array_filter($this->getColumnsData(), function($column) use ($pkName) {
-                return !$this->valueIsChanged($column);
+                return $this->valueIsChanged($column);
             }, ARRAY_FILTER_USE_KEY);
         } elseif ($updateColumns){
             $all = $this->getColumnsData();
@@ -364,9 +354,13 @@ abstract class RecordModel extends Model
 
         unset($data[$pkName]);
 
-        $result = static::getDb()->update(self::$tableName, $data, [$pkName => $pkValue]);
+        // only exec on the data is not empty.
+        if ($data) {
+            $result = static::getDb()->update(self::getTableName(), [$pkName => $pkValue], $data);
+        }
 
         if ($result) {
+            $this->changes = []; // reset
             $this->afterUpdate();
             $this->afterSave();
         }
@@ -416,12 +410,12 @@ abstract class RecordModel extends Model
     }
 
     /**
-     * @param mixed $where
+     * @param mixed $wheres
      * @return int
      */
-    public static function deleteBy($where)
+    public static function deleteBy($wheres)
     {
-        return static::getDb()->delete(self::$tableName, $where);
+        return static::getDb()->delete(self::getTableName(), $wheres);
     }
 
     /***********************************************************************************
