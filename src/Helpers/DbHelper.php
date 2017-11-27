@@ -8,7 +8,10 @@
 
 namespace SimpleAR\Helpers;
 
-
+/**
+ * Class DbHelper
+ * @package SimpleAR\Helpers
+ */
 class DbHelper
 {
     /**

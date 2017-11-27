@@ -113,7 +113,7 @@ class Model extends SimpleCollection
      * format column's data type
      * @param $column
      * @param $value
-     * @return SimpleCollection
+     * @return $this|SimpleCollection
      */
     public function set($column, $value)
     {

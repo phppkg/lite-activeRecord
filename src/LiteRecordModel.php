@@ -10,8 +10,7 @@ namespace SimpleAR;
 
 use Inhere\Exceptions\InvalidArgumentException;
 use Inhere\Exceptions\InvalidConfigException;
-use Inhere\Exceptions\UnknownMethodException;
-use Inhere\Library\Helpers\Arr;
+use Inhere\Library\Collections\SimpleCollection;
 use Inhere\Library\Components\DatabaseClient;
 
 /**
@@ -198,7 +197,7 @@ abstract class LiteRecordModel extends Model
 
     /**
      * find record by primary key
-     * @param string|int $pkValue
+     * @param string|int|array $pkValue
      * @param  string|array $select
      * @param  array $options
      * @return static
@@ -208,7 +207,7 @@ abstract class LiteRecordModel extends Model
         // only one
         $wheres = [static::$pkName => $pkValue];
 
-        if (is_array($pkValue)) {// many
+        if (\is_array($pkValue)) {// many
             $wheres = [static::$pkName, 'IN', $pkValue];
         }
 
@@ -226,7 +225,7 @@ abstract class LiteRecordModel extends Model
     {
         $options = array_merge(static::$defaultOptions, $options);
 
-        if ($isModel = $options['fetchType'] === 'model') {
+        if ($isModel = ($options['fetchType'] === 'model')) {
             $options['class'] = static::class;
         }
 
@@ -306,6 +305,7 @@ abstract class LiteRecordModel extends Model
     /**
      * update by primary key
      * @param array $updateColumns only update some columns
+     * @param bool $updateNulls
      * @return static
      * @throws InvalidArgumentException
      */
@@ -324,7 +324,7 @@ abstract class LiteRecordModel extends Model
         $validateColumns = $updateColumns;
 
         // the primary column is must be exists for defined validate.
-        if ($validateColumns && !in_array($pkName, $validateColumns, true)) {
+        if ($validateColumns && !\in_array($pkName, $validateColumns, true)) {
             $validateColumns[] = $pkName;
         }
 
@@ -336,10 +336,10 @@ abstract class LiteRecordModel extends Model
         // collect there are data will update.
         if ($this->onlyUpdateChanged) {
             // Exclude the column if it value not change
-            $data = array_filter($this->getColumnsData(), function($column) use ($pkName) {
-                return $this->valueIsChanged($column);
+            $data = array_filter($this->getColumnsData(), function ($col) {
+                return $this->valueIsChanged($col);
             }, ARRAY_FILTER_USE_KEY);
-        } elseif ($updateColumns){
+        } elseif ($updateColumns) {
             $all = $this->getColumnsData();
             $data = [];
 
@@ -350,6 +350,12 @@ abstract class LiteRecordModel extends Model
             }
         } else {
             $data = $this->getColumnsData();
+
+            if (!$updateNulls) {
+                $data = array_filter($data, function ($val) {
+                    return $val !== null;
+                });
+            }
         }
 
         unset($data[$pkName]);
@@ -366,6 +372,7 @@ abstract class LiteRecordModel extends Model
         }
 
         unset($data);
+
         return $this;
     }
 
@@ -402,7 +409,7 @@ abstract class LiteRecordModel extends Model
         $where = [static::$pkName => $pkValue];
 
         // many
-        if (is_array($pkValue)) {
+        if (\is_array($pkValue)) {
             $where = [static::$pkName, 'IN', $pkValue];
         }
 
@@ -499,7 +506,9 @@ abstract class LiteRecordModel extends Model
      ***********************************************************************************/
 
     /**
-     * @return static
+     * @param string $column
+     * @param mixed $value
+     * @return $this|SimpleCollection
      */
     public function set($column, $value)
     {
@@ -525,7 +534,7 @@ abstract class LiteRecordModel extends Model
      */
     public function enableValidate($value = null)
     {
-        if (is_bool($value)) {
+        if (\is_bool($value)) {
             $this->enableValidate = $value;
         }
 
