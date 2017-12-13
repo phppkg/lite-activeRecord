@@ -15,9 +15,7 @@
   "require": {
     "php": ">=7.0.0",
     "inhere/php-validate": "^2.0",
-    "psr/log": "~1.0",
-    "windwalker/query": "^3.0",
-    "windwalker/compare": "^3.0"
+    "psr/log": "~1.0"
   },
   "autoload": {
     "psr-4": {
