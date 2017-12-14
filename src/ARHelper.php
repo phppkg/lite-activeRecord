@@ -12,7 +12,7 @@ namespace SimpleAR\Helpers;
  * Class DbHelper
  * @package SimpleAR\Helpers
  */
-class DbHelper
+class ARHelper
 {
     /**
      * @param string $name
