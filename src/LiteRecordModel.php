@@ -11,7 +11,7 @@ namespace SimpleAR;
 use Inhere\Exceptions\InvalidArgumentException;
 use Inhere\Exceptions\InvalidConfigException;
 use Inhere\Library\Collections\SimpleCollection;
-use Inhere\Library\Components\DatabaseClient;
+use Inhere\LiteDb\ExtendedPdo;
 
 /**
  * Class RecordModel
@@ -172,7 +172,7 @@ abstract class LiteRecordModel extends Model
 
     /**
      * the database driver instance
-     * @return DatabaseClient
+     * @return ExtendedPdo
      */
     abstract public static function getDb();
 
@@ -265,6 +265,7 @@ abstract class LiteRecordModel extends Model
      * @param array $updateColumns
      * @param bool|false $updateNulls
      * @return bool
+     * @throws InvalidArgumentException
      */
     public function save(array $updateColumns = [], $updateNulls = false)
     {
