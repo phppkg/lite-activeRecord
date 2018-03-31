@@ -13,7 +13,7 @@
 
 ## 项目地址
 
-- **git@osc** https://git.oschina.net/inhere/php-simple-activeRecord.git
+- **git@osc** https://gitee.com/inhere/php-simple-activeRecord.git
 - **github** https://github.com/inhere/php-simple-activeRecord.git
 
 ## 安装
@@ -23,23 +23,10 @@
 编辑 `composer.json`，在 `require` 添加
 
 ```
-"inhere/php-simple-activeRecord": "dev-master",
+"inhere/simple-active-record": "dev-master",
 ```
 
 然后执行: `composer update`
-
-- 直接拉取
-
-```
-git clone https://git.oschina.net/inhere/php-simple-activeRecord.git // git@osc
-git clone https://github.com/inhere/php-simple-activeRecord.git // github
-```
-
-## 结构说明
-
-```text
-
-```
 
 ## 如何使用
 

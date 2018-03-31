@@ -8,9 +8,7 @@
 
 namespace SimpleAR;
 
-use Inhere\Exceptions\InvalidArgumentException;
-use Inhere\Exceptions\InvalidConfigException;
-use Inhere\Library\Collections\SimpleCollection;
+use MyLib\Collection\SimpleCollection;
 use Inhere\LiteDb\ExtendedPdo;
 
 /**
@@ -98,6 +96,7 @@ abstract class LiteRecordModel extends Model
      * @param $data
      * @param string $scene
      * @return static
+     * @throws \InvalidArgumentException
      */
     public static function load($data, $scene = '')
     {
@@ -108,7 +107,7 @@ abstract class LiteRecordModel extends Model
      * RecordModel constructor.
      * @param array $items
      * @param string $scene
-     * @throws InvalidConfigException
+     * @throws \InvalidArgumentException
      */
     public function __construct(array $items = [], string $scene = '')
     {
@@ -117,7 +116,7 @@ abstract class LiteRecordModel extends Model
         $this->scene = trim($scene);
 
         if (!$this->getColumns()) {
-            throw new InvalidConfigException('Must define method columns() and cannot be empty.');
+            throw new \InvalidArgumentException('Must define method columns() and cannot be empty.');
         }
 
         self::getTableName();
@@ -131,7 +130,7 @@ abstract class LiteRecordModel extends Model
      * TODO 定义保存数据时,当前场景允许写入的属性字段
      * @return array
      */
-    public function scenarios()
+    public function scenarios(): array
     {
         return [
             // 'create' => ['username', 'email', 'password','createTime'],
@@ -142,7 +141,7 @@ abstract class LiteRecordModel extends Model
     /**
      * @return string
      */
-    public static function tableName()
+    public static function tableName(): string
     {
         // default is current class name
         $name = lcfirst(basename(str_replace('\\', '/', static::class)));
@@ -163,7 +162,7 @@ abstract class LiteRecordModel extends Model
      * if {@see static::$aliasName} not empty, return `tableName AS aliasName`
      * @return string
      */
-    final public static function queryName()
+    final public static function queryName(): string
     {
         self::getTableName();
 
@@ -174,13 +173,13 @@ abstract class LiteRecordModel extends Model
      * the database driver instance
      * @return ExtendedPdo
      */
-    abstract public static function getDb();
+    abstract public static function getDb(): ExtendedPdo;
 
     /**
      * getTableName
      * @return string
      */
-    final public static function getTableName()
+    final public static function getTableName(): string
     {
         if (!self::$tableName) {
             self::$tableName = static::tableName();
@@ -201,6 +200,8 @@ abstract class LiteRecordModel extends Model
      * @param  string|array $select
      * @param  array $options
      * @return static
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
     public static function findByPk($pkValue, string $select = '*', array $options = [])
     {
@@ -220,6 +221,8 @@ abstract class LiteRecordModel extends Model
      * @param string|array $select
      * @param array $options
      * @return static
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
     public static function findOne($wheres, string $select = '*', array $options = [])
     {
@@ -245,10 +248,12 @@ abstract class LiteRecordModel extends Model
      * @param string|array $select
      * @param array $options
      * @return array
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function findAll($wheres, string $select = '*', array $options = [])
+    public static function findAll($wheres, string $select = '*', array $options = []): array
     {
-        $options = array_merge(static::$defaultOptions, ['fetchType' => 'assoc'], $options);
+        $options = \array_merge(static::$defaultOptions, ['fetchType' => 'assoc'], $options);
 
         if ($options['fetchType'] === 'model') {
             $options['class'] = static::class;
@@ -265,9 +270,11 @@ abstract class LiteRecordModel extends Model
      * @param array $updateColumns
      * @param bool|false $updateNulls
      * @return bool
-     * @throws InvalidArgumentException
+     * @throws \RuntimeException
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public function save(array $updateColumns = [], $updateNulls = false)
+    public function save(array $updateColumns = [], $updateNulls = false): bool
     {
         $this->isNew() ? $this->insert() : $this->update($updateColumns, $updateNulls);
 
@@ -276,6 +283,8 @@ abstract class LiteRecordModel extends Model
 
     /**
      * @return static
+     * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
     public function insert()
     {
@@ -308,13 +317,14 @@ abstract class LiteRecordModel extends Model
      * @param array $updateColumns only update some columns
      * @param bool $updateNulls
      * @return static
-     * @throws InvalidArgumentException
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function update(array $updateColumns = [], $updateNulls = false)
     {
         // check primary key
         if (!$pkValue = $this->pkValue()) {
-            throw new InvalidArgumentException('The primary value is cannot be empty for update the model');
+            throw new \InvalidArgumentException('The primary value is cannot be empty for update the model');
         }
 
         $this->beforeUpdate();
@@ -384,8 +394,10 @@ abstract class LiteRecordModel extends Model
     /**
      * delete by model
      * @return int
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public function delete()
+    public function delete(): int
     {
         if (!$pkValue = $this->pkValue()) {
             return 0;
@@ -403,8 +415,10 @@ abstract class LiteRecordModel extends Model
     /**
      * @param int|array $pkValue
      * @return int
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function deleteByPk($pkValue)
+    public static function deleteByPk($pkValue): int
     {
         // only one
         $where = [static::$pkName => $pkValue];
@@ -420,8 +434,10 @@ abstract class LiteRecordModel extends Model
     /**
      * @param mixed $wheres
      * @return int
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function deleteBy($wheres)
+    public static function deleteBy($wheres): int
     {
         return static::getDb()->delete(self::getTableName(), $wheres);
     }
@@ -432,32 +448,40 @@ abstract class LiteRecordModel extends Model
 
     /**
      * @return bool
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function beginTransaction()
+    public static function beginTransaction(): bool
     {
         return static::getDb()->beginTransaction();
     }
 
     /**
      * @return bool
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function commit()
+    public static function commit(): bool
     {
         return static::getDb()->commit();
     }
 
     /**
      * @return bool
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function rollBack()
+    public static function rollBack(): bool
     {
         return static::getDb()->rollBack();
     }
 
     /**
      * @return bool
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function inTransaction()
+    public static function inTransaction(): bool
     {
         return static::getDb()->inTransaction();
     }
@@ -466,7 +490,7 @@ abstract class LiteRecordModel extends Model
      * extra operation
      ***********************************************************************************/
 
-    protected function beforeInsert()
+    protected function beforeInsert(): bool
     {
         return true;
     }
@@ -475,7 +499,7 @@ abstract class LiteRecordModel extends Model
     {
     }
 
-    protected function beforeUpdate()
+    protected function beforeUpdate(): bool
     {
         return true;
     }
@@ -484,7 +508,7 @@ abstract class LiteRecordModel extends Model
     {
     }
 
-    protected function beforeSave()
+    protected function beforeSave(): bool
     {
         return true;
     }
@@ -493,7 +517,7 @@ abstract class LiteRecordModel extends Model
     {
     }
 
-    protected function beforeDelete()
+    protected function beforeDelete(): bool
     {
         return true;
     }
@@ -524,7 +548,7 @@ abstract class LiteRecordModel extends Model
     /**
      * @return bool
      */
-    public function isNew()
+    public function isNew(): bool
     {
         return !$this->get(static::$pkName, false);
     }
@@ -533,7 +557,7 @@ abstract class LiteRecordModel extends Model
      * @param null|bool $value
      * @return bool
      */
-    public function enableValidate($value = null)
+    public function enableValidate($value = null): bool
     {
         if (\is_bool($value)) {
             $this->enableValidate = $value;
@@ -563,7 +587,7 @@ abstract class LiteRecordModel extends Model
      * @param string $column
      * @return bool
      */
-    protected function valueIsChanged($column)
+    protected function valueIsChanged($column): bool
     {
         return $this->isNew() ||
             (isset($this->changes[$column]) && $this->get($column) !== $this->getChange($column));
@@ -572,7 +596,7 @@ abstract class LiteRecordModel extends Model
     /**
      * @return bool
      */
-    public function isLoadFromDb()
+    public function isLoadFromDb(): bool
     {
         return $this->loadFromDb;
     }
@@ -588,7 +612,7 @@ abstract class LiteRecordModel extends Model
     /**
      * @return array
      */
-    public function getOldData()
+    public function getOldData(): array
     {
         return $this->_backup;
     }

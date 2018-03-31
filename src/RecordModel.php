@@ -8,9 +8,6 @@
 
 namespace SimpleAR;
 
-use Inhere\Exceptions\InvalidArgumentException;
-use Inhere\Exceptions\InvalidConfigException;
-use Inhere\Exceptions\UnknownMethodException;
 use Inhere\Library\Helpers\Arr;
 use SimpleAR\Database\AbstractDriver;
 use SimpleAR\Helpers\ModelHelper;
@@ -101,6 +98,7 @@ abstract class RecordModel extends Model
      * @param $data
      * @param string $scene
      * @return static
+     * @throws \InvalidArgumentException
      */
     public static function load($data, $scene = '')
     {
@@ -111,7 +109,7 @@ abstract class RecordModel extends Model
      * RecordModel constructor.
      * @param array $items
      * @param string $scene
-     * @throws InvalidConfigException
+     * @throws \InvalidArgumentException
      */
     public function __construct(array $items = [], $scene = '')
     {
@@ -120,7 +118,7 @@ abstract class RecordModel extends Model
         $this->scene = trim($scene);
 
         if (!$this->getColumns()) {
-            throw new InvalidConfigException('Must define method columns() and cannot be empty.');
+            throw new \InvalidArgumentException('Must define method columns() and cannot be empty.');
         }
 
         self::getTableName();
@@ -134,7 +132,7 @@ abstract class RecordModel extends Model
      * TODO 定义保存数据时,当前场景允许写入的属性字段
      * @return array
      */
-    public function scenarios()
+    public function scenarios(): array
     {
         return [
             // 'create' => ['username', 'email', 'password','createTime'],
@@ -145,7 +143,7 @@ abstract class RecordModel extends Model
     /**
      * @return string
      */
-    public static function tableName()
+    public static function tableName(): string
     {
         // default is current class name
         $className = lcfirst(basename(str_replace('\\', '/', static::class)));
@@ -162,7 +160,7 @@ abstract class RecordModel extends Model
      * if {@see static::$aliasName} not empty, return `tableName AS aliasName`
      * @return string
      */
-    final public static function queryName()
+    final public static function queryName(): string
     {
         self::getTableName();
 
@@ -225,6 +223,7 @@ abstract class RecordModel extends Model
      * @param mixed $where
      * @param string|array $options
      * @return static|array
+     * @throws UnknownMethodException
      */
     public static function findOne($where, $options = null)
     {
