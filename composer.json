@@ -16,7 +16,7 @@
     "php": ">=7.0.0",
     "inhere/php-validate": "^2.0",
     "inhere/lite-db": "dev-master",
-    "mylib/collection": "~1.0",
+    "toolkit/collection": "~1.0",
     "psr/log": "~1.0"
   },
   "autoload": {

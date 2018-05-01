@@ -8,7 +8,7 @@
 
 namespace SimpleAR;
 
-use MyLib\Collection\SimpleCollection;
+use Toolkit\Collection\SimpleCollection;
 use Inhere\LiteDb\ExtendedPdo;
 
 /**

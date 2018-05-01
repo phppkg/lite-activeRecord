@@ -8,8 +8,8 @@
 
 namespace SimpleAR;
 
-use Inhere\Library\Collections\SimpleCollection;
-use Inhere\Library\Type;
+use Toolkit\Collection\SimpleCollection;
+use Toolkit\PhpUtil\Type;
 use Inhere\Validate\ValidationTrait;
 
 /**
