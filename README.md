@@ -1,5 +1,9 @@
 # simple activeRecord
 
+[![License](https://img.shields.io/packagist/l/inhere/console.svg?style=flat-square)](LICENSE)
+[![Php Version](https://img.shields.io/badge/php-%3E=7.0-brightgreen.svg?maxAge=2592000)](https://packagist.org/packages/inhere/simple-active-record)
+[![Latest Stable Version](http://img.shields.io/packagist/v/inhere/simple-active-record.svg)](https://packagist.org/packages/inhere/simple-active-record)
+
 一个简洁的php activeRecord库
 
 功能：
@@ -11,22 +15,34 @@
 - https://github.com/illuminate/database
 - https://github.com/ventoviro/windwalker-query
 
-## 项目地址
+## Projects
 
-- **git@osc** https://gitee.com/inhere/php-simple-activeRecord.git
-- **github** https://github.com/inhere/php-simple-activeRecord.git
+- **github** https://github.com/inhere/php-lite-database.git
+- **gitee** https://gitee.com/inhere/php-lite-database.git
 
-## 安装
+## Install
 
-- 使用 composer
+- By composer require
 
-编辑 `composer.json`，在 `require` 添加
-
-```
-"inhere/simple-active-record": "dev-master",
+```bash
+composer require inhere/simple-active-record
 ```
 
-然后执行: `composer update`
+- By composer.json
+
+```json
+{
+    "require": {
+        "inhere/simple-active-record": "~1.0"
+    }
+}
+```
+
+- Pull directly
+
+```bash
+git clone https://github.com/inhere/php-lite-database.git
+```
 
 ## 如何使用
 

@@ -2,6 +2,7 @@
 .phpintel/
 .vscode/
 vendor/
+caches/
 tmp/*
 .env
 .git/

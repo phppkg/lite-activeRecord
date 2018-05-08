@@ -7,7 +7,7 @@
  */
 
 use PHPUnit\Framework\TestCase;
-use SimpleAR\LiteRecordModel;
+use SimpleAR\RecordModel;
 
 /**
  * Class LiteRecordModelTest

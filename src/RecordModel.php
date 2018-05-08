@@ -8,52 +8,39 @@
 
 namespace SimpleAR;
 
-use Inhere\Library\Helpers\Arr;
-use SimpleAR\Database\AbstractDriver;
-use SimpleAR\Helpers\ModelHelper;
-use Windwalker\Query\Query;
+use Toolkit\Collection\SimpleCollection;
+use Inhere\LiteDb\LitePdo;
 
 /**
  * Class RecordModel
  * @package SimpleAR
  */
-abstract class RecordModel extends Model
+abstract class RecordModel extends Model implements RecordModelInterface
 {
-    use RecordModelExtraTrait;
+    // use RecordModelTrait;
 
     /**
-     * @var array
+     * @var array Data backup
      */
     private $_backup = [];
 
     /**
-     * 发生改变的数据
-     * @var array
+     * @var array Changed data
      */
-    private $changes = [];
-
-    const SCENE_DEFAULT = 'default';
-    const SCENE_CREATE = 'create';
-    const SCENE_UPDATE = 'update';
-    const SCENE_DELETE = 'delete';
-    const SCENE_SEARCH = 'search';
+    private $_changes = [];
 
     /**
-     * the table primary key name
-     * @var string
+     * @var string The table primary key name
      */
-    protected static $priKey = 'id';
+    protected static $pkName = 'id';
 
     /**
-     * current table name alias
-     * 'mt' -- main table
-     * @var string
+     * @var string Current table name alias 'mt' -- main table
      */
     protected static $aliasName = 'mt';
 
     /**
-     * the table name
-     * @var string
+     * @var string The table name
      */
     private static $tableName;
 
@@ -63,29 +50,24 @@ abstract class RecordModel extends Model
     protected static $defaultOptions = [
         /* data index column. */
         'indexKey' => null,
+
         /*
-        data type, in :
+        data type, allowed :
             'model'      -- return object, instanceof `self`
             '\\stdClass' -- return object, instanceof `stdClass`
             'array'      -- return array, only  [ column's value ]
             'assoc'      -- return array, Contain  [ column's name => column's value]
         */
-        'class' => 'model',
+        'fetchType' => 'model',
 
         // 追加限制
-        // 可用方法: limit($limit, $offset), group($columns), having($conditions, $glue = 'AND')
-        // innerJoin($table, $condition = []), leftJoin($table, $condition = []), order($columns),
-        // outerJoin($table, $condition = []), rightJoin($table, $condition = []), bind()
-        // ... more {@see Query}
-        //
         // e.g:
         //  'limit' => [10, 120],
         //  'order' => 'createTime ASC',
         //  'group' => 'id, type',
-        'select' => '*',
 
         // can be a closure
-        // function ($query) { ... }
+        // function () { ... }
     ];
 
     /**
@@ -93,6 +75,12 @@ abstract class RecordModel extends Model
      * @var bool
      */
     protected $onlyUpdateChanged = true;
+
+    /**
+     * Are you allowed to insert the primary key?
+     * @var boolean
+     */
+    protected $allowInsertPk = true;
 
     /**
      * @param $data
@@ -106,12 +94,62 @@ abstract class RecordModel extends Model
     }
 
     /**
+     * @return string
+     */
+    public static function tableName(): string
+    {
+        // default is current class name
+        $name = lcfirst(basename(str_replace('\\', '/', static::class)));
+
+        if (\substr($name, -5) === 'Model') {
+            $name = \substr($name, 0, -5);
+        }
+
+        // '{@pfx}' -- is table prefix placeholder
+        // return '{@pfx}articles';
+        // if no table prefix
+        // return 'articles';
+
+        return '{@pfx}' . $name;
+    }
+
+    /**
+     * if {@see static::$aliasName} not empty, return `tableName AS aliasName`
+     * @return string
+     */
+    final public static function queryName(): string
+    {
+        self::getTableName();
+
+        return static::$aliasName ? self::$tableName . ' AS ' . static::$aliasName : self::$tableName;
+    }
+
+    /**
+     * the database driver instance
+     * @return LitePdo
+     */
+    abstract public static function getDb(): LitePdo;
+
+    /**
+     * getTableName
+     * @return string
+     */
+    final public static function getTableName(): string
+    {
+        if (!self::$tableName) {
+            self::$tableName = static::tableName();
+        }
+
+        return self::$tableName;
+    }
+
+    /**
      * RecordModel constructor.
      * @param array $items
      * @param string $scene
      * @throws \InvalidArgumentException
      */
-    public function __construct(array $items = [], $scene = '')
+    public function __construct(array $items = [], string $scene = '')
     {
         parent::__construct($items);
 
@@ -140,175 +178,125 @@ abstract class RecordModel extends Model
         ];
     }
 
-    /**
-     * @return string
-     */
-    public static function tableName(): string
-    {
-        // default is current class name
-        $className = lcfirst(basename(str_replace('\\', '/', static::class)));
-
-        // '{@pfx}' -- is table prefix placeholder
-        // return '{@pfx}articles';
-        // if no table prefix
-        // return 'articles';
-
-        return '{@pfx}' . $className;
-    }
-
-    /**
-     * if {@see static::$aliasName} not empty, return `tableName AS aliasName`
-     * @return string
-     */
-    final public static function queryName(): string
-    {
-        self::getTableName();
-
-        return static::$aliasName ? self::$tableName . ' AS ' . static::$aliasName : self::$tableName;
-    }
-
-    /**
-     * the database driver instance
-     * @return AbstractDriver
-     */
-    abstract public static function getDb();
-
-    /**
-     * init query
-     * @param mixed $where
-     * @return Query
-     */
-    public static function query($where = null)
-    {
-        return ModelHelper::handleConditions($where, static::class)->from(static::queryName());
-    }
-
-    /**
-     * getTableName
-     * @return string
-     */
-    final public static function getTableName()
-    {
-        if (!self::$tableName) {
-            self::$tableName = static::tableName();
-        }
-
-        return self::$tableName;
-    }
 
     /***********************************************************************************
      * find operation
      ***********************************************************************************/
 
+    private $loadFromDb = false;
+
     /**
      * find record by primary key
-     * @param mixed $priValue
-     * @param string|array $options
+     * @param string|int|array $pkValue
+     * @param  string|array $select
+     * @param  array $options
      * @return static
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function findByPk($priValue, $options = null)
+    public static function findByPk($pkValue, string $select = '*', array $options = [])
     {
         // only one
-        $where = [static::$priKey => $priValue];
+        $wheres = [static::$pkName => $pkValue];
 
-        if (\is_array($priValue)) {// many
-            $where = static::$priKey . ' IN (' . implode(',', $priValue) . ')';
+        if (\is_array($pkValue)) {// many
+            $wheres = [static::$pkName, 'IN', $pkValue];
         }
 
-        return static::findOne($where, $options);
+        return static::findOne($wheres, $select, $options);
     }
 
     /**
      * find a record by where condition
-     * @param mixed $where
-     * @param string|array $options
-     * @return static|array
-     * @throws UnknownMethodException
+     * @param mixed $wheres
+     * @param string|array $select
+     * @param array $options
+     * @return static
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function findOne($where, $options = null)
+    public static function findOne($wheres, string $select = '*', array $options = [])
     {
-        // as select
-        if (\is_string($options)) {
-            $options = [
-                'select' => $options
-            ];
+        $options = \array_merge(static::$defaultOptions, $options);
+
+        if ($isModel = ($options['fetchType'] === 'model')) {
+            $options['class'] = static::class;
         }
 
-        $options = array_merge(static::$defaultOptions, (array)$options);
-        $class = $options['class'] === 'model' ? static::class : $options['class'];
-
-        unset($options['indexKey'], $options['class']);
-        $query = self::applyAppendOptions($options, static::query($where));
-
-        $model = static::setQuery($query)->loadOne($class);
+        $model = static::getDb()->queryOne(self::getTableName(), $wheres, $select, $options);
 
         // use data model
-        if ($model && $class === static::class) {
+        if ($model && $isModel) {
             /** @var static $model */
-            $model->setOldData($model->all());
+            $model->setLoadFromDb();
         }
 
         return $model;
     }
 
     /**
-     * @param mixed $where {@see self::handleConditions() }
-     * @param string|array $options
+     * @param mixed $wheres {@see self::handleConditions() }
+     * @param string|array $select
+     * @param array $options
      * @return array
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function findAll($where, $options = null)
+    public static function findAll($wheres, string $select = '*', array $options = []): array
     {
-        // as select
-        if (\is_string($options)) {
-            $options = [
-                'select' => $options
-            ];
+        $options = \array_merge(static::$defaultOptions, ['fetchType' => 'assoc'], $options);
+
+        if ($options['fetchType'] === 'model') {
+            $options['class'] = static::class;
         }
 
-        $options = array_merge(static::$defaultOptions, ['class' => 'assoc'], (array)$options);
-        $indexKey = Arr::remove($options, 'indexKey');
-        $class = $options['class'] === 'model' ? static::class : $options['class'];
-
-        unset($options['indexKey'], $options['class']);
-
-        $query = self::applyAppendOptions($options, static::query($where));
-
-        return static::setQuery($query)->loadAll($indexKey, $class);
+        return static::getDb()->queryAll(self::getTableName(), $wheres, $select, $options);
     }
+
+    /***********************************************************************************
+     * create/update operation
+     ***********************************************************************************/
 
     /**
      * @param array $updateColumns
      * @param bool|false $updateNulls
      * @return bool
+     * @throws \RuntimeException
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public function save(array $updateColumns = [], $updateNulls = false)
+    public function save(array $updateColumns = [], $updateNulls = false): bool
     {
         $this->isNew() ? $this->insert() : $this->update($updateColumns, $updateNulls);
 
         return !$this->hasError();
     }
 
-    /***********************************************************************************
-     * create operation
-     ***********************************************************************************/
-
     /**
      * @return static
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
-    public function insert()
+    public function insert(): self
     {
+        // check primary key
+        if (!$this->allowInsertPk && $this->pkValue()) {
+            throw new \RuntimeException('The primary key value is exists, cannot run the method insert()');
+        }
+
         $this->beforeInsert();
         $this->beforeSave();
 
+        // validate failure
         if ($this->enableValidate && $this->validate()->fail()) {
             return $this;
         }
 
-        $priValue = static::getDb()->insert(self::$tableName, $this->getColumnsData());
-
         // when insert successful.
-        if ($priValue) {
-            $this->set(static::$priKey, $priValue);
+        if ($pkValue = static::getDb()->insert(self::getTableName(), $this->getColumnsData())) {
+            $this->set(static::$pkName, $pkValue);
+            $this->setLoadFromDb();
 
             $this->afterInsert();
             $this->afterSave();
@@ -317,57 +305,78 @@ abstract class RecordModel extends Model
         return $this;
     }
 
-    /***********************************************************************************
-     * update operation
-     ***********************************************************************************/
-
     /**
      * update by primary key
      * @param array $updateColumns only update some columns
-     * @param bool|false $updateNulls
+     * @param bool $updateNulls
      * @return static
-     * @throws InvalidArgumentException
+     * @throws \PDOException
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function update(array $updateColumns = [], $updateNulls = false)
     {
-        $priKey = static::$priKey;
+        // check primary key
+        if (!$pkValue = $this->pkValue()) {
+            throw new \InvalidArgumentException('The primary value is cannot be empty for update the model');
+        }
+
         $this->beforeUpdate();
         $this->beforeSave();
 
-        // the primary column is must be exists.
-        if ($updateColumns && !\in_array($priKey, $updateColumns, true)) {
-            $updateColumns[] = $priKey;
+        $result = true;
+        $pkName = static::$pkName;
+        $validateColumns = $updateColumns;
+
+        // the primary column is must be exists for defined validate.
+        if ($validateColumns && !\in_array($pkName, $validateColumns, true)) {
+            $validateColumns[] = $pkName;
         }
 
         // validate data
-        if ($this->enableValidate && $this->validate($updateColumns)->fail()) {
+        if ($this->enableValidate && $this->validate($validateColumns)->fail()) {
             return $this;
         }
 
         // collect there are data will update.
-        $data = $this->getColumnsData();
-
         if ($this->onlyUpdateChanged) {
             // Exclude the column if it value not change
-            foreach ($data as $column => $value) {
-                if ($column !== $priKey && !$this->valueIsChanged($column)) {
-                    unset($data[$column]);
+            $data = \array_filter($this->getColumnsData(), function ($col) {
+                return $this->valueIsChanged($col);
+            }, ARRAY_FILTER_USE_KEY);
+        } elseif ($updateColumns) {
+            $all = $this->getColumnsData();
+            $data = [];
+
+            foreach ($updateColumns as $column) {
+                if (array_key_exists($column, $all)) {
+                    $data[$column] = $all[$column];
                 }
+            }
+        } else {
+            $data = $this->getColumnsData();
+
+            if (!$updateNulls) {
+                $data = array_filter($data, function ($val) {
+                    return $val !== null;
+                });
             }
         }
 
-        // check primary key
-        if (!isset($data[$priKey])) {
-            throw new InvalidArgumentException('Must be require primary column of the method update()');
+        unset($data[$pkName]);
+
+        // only exec on the data is not empty.
+        if ($data) {
+            $result = static::getDb()->update(self::getTableName(), [$pkName => $pkValue], $data);
         }
 
-        $result = static::getDb()->update(static::tableName(), $data, $priKey, $updateNulls);
-
         if ($result) {
+            $this->_changes = []; // reset
             $this->afterUpdate();
             $this->afterSave();
         }
 
+        unset($data);
         return $this;
     }
 
@@ -378,20 +387,52 @@ abstract class RecordModel extends Model
     /**
      * delete by model
      * @return int
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public function delete()
+    public function delete(): int
     {
-        if (!($priValue = $this->priValue())) {
+        if (!$pkValue = $this->pkValue()) {
             return 0;
         }
 
         $this->beforeDelete();
 
-        if ($affected = self::deleteByPk($priValue)) {
+        if ($affected = self::deleteByPk($pkValue)) {
             $this->afterDelete();
         }
 
         return $affected;
+    }
+
+    /**
+     * @param int|array $pkValue
+     * @return int
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
+     */
+    public static function deleteByPk($pkValue): int
+    {
+        // only one
+        $where = [static::$pkName => $pkValue];
+
+        // many
+        if (\is_array($pkValue)) {
+            $where = [static::$pkName, 'IN', $pkValue];
+        }
+
+        return self::deleteBy($where);
+    }
+
+    /**
+     * @param mixed $wheres
+     * @return int
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
+     */
+    public static function deleteBy($wheres): int
+    {
+        return static::getDb()->delete(self::getTableName(), $wheres);
     }
 
     /***********************************************************************************
@@ -399,45 +440,50 @@ abstract class RecordModel extends Model
      ***********************************************************************************/
 
     /**
-     * @param bool $throwException throw a exception on failure.
      * @return bool
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function beginTrans($throwException = true)
+    public static function beginTransaction(): bool
     {
-        return static::getDb()->beginTrans($throwException);
-    }
-
-    /**
-     * @param bool $throwException throw a exception on failure.
-     * @return bool
-     */
-    public static function commit($throwException = true)
-    {
-        return static::getDb()->commit($throwException);
-    }
-
-    /**
-     * @param bool $throwException throw a exception on failure.
-     * @return bool
-     */
-    public static function rollBack($throwException = true)
-    {
-        return static::getDb()->rollBack($throwException);
+        return static::getDb()->beginTransaction();
     }
 
     /**
      * @return bool
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
      */
-    public static function inTrans()
+    public static function commit(): bool
     {
-        return static::getDb()->inTrans();
+        return static::getDb()->commit();
+    }
+
+    /**
+     * @return bool
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
+     */
+    public static function rollBack(): bool
+    {
+        return static::getDb()->rollBack();
+    }
+
+    /**
+     * @return bool
+     * @throws \PDOException
+     * @throws \InvalidArgumentException
+     */
+    public static function inTransaction(): bool
+    {
+        return static::getDb()->inTransaction();
     }
 
     /***********************************************************************************
      * extra operation
      ***********************************************************************************/
 
-    protected function beforeInsert()
+    protected function beforeInsert(): bool
     {
         return true;
     }
@@ -446,7 +492,7 @@ abstract class RecordModel extends Model
     {
     }
 
-    protected function beforeUpdate()
+    protected function beforeUpdate(): bool
     {
         return true;
     }
@@ -455,7 +501,7 @@ abstract class RecordModel extends Model
     {
     }
 
-    protected function beforeSave()
+    protected function beforeSave(): bool
     {
         return true;
     }
@@ -464,7 +510,7 @@ abstract class RecordModel extends Model
     {
     }
 
-    protected function beforeDelete()
+    protected function beforeDelete(): bool
     {
         return true;
     }
@@ -478,18 +524,33 @@ abstract class RecordModel extends Model
      ***********************************************************************************/
 
     /**
+     * @param string $column
+     * @param mixed $value
+     * @return $this|SimpleCollection
+     */
+    public function set($column, $value)
+    {
+        // on change, save old value
+        if ($this->loadFromDb && $this->hasColumn($column)) {
+            $this->setChange($column, $this->get($column));
+        }
+
+        return parent::set($column, $value);
+    }
+
+    /**
      * @return bool
      */
-    public function isNew()
+    public function isNew(): bool
     {
-        return !($this->has(static::$priKey) && $this->get(static::$priKey, false));
+        return !$this->get(static::$pkName, false);
     }
 
     /**
      * @param null|bool $value
      * @return bool
      */
-    public function enableValidate($value = null)
+    public function enableValidate($value = null): bool
     {
         if (\is_bool($value)) {
             $this->enableValidate = $value;
@@ -499,35 +560,19 @@ abstract class RecordModel extends Model
     }
 
     /**
-     * @param bool $forceNew
-     * @return Query
+     * @return string|int
      */
-    final public static function getQuery($forceNew = false)
+    public function pkName()
     {
-        return static::getDb()->newQuery($forceNew);
-    }
-
-    /**
-     * findXxx 无法满足需求时，自定义 $query
-     * ```php
-     * $query = XModel::getQuery();
-     * ...
-     * XModel::setQuery($query)->loadAll(null, XModel::class);
-     * ```
-     * @param string|Query $query
-     * @return AbstractDriver
-     */
-    final public static function setQuery($query)
-    {
-        return static::getDb()->setQuery($query);
+        return static::$pkName;
     }
 
     /**
      * @return mixed
      */
-    public function priValue()
+    public function pkValue()
     {
-        return $this->get(static::$priKey);
+        return $this->get(static::$pkName);
     }
 
     /**
@@ -535,32 +580,52 @@ abstract class RecordModel extends Model
      * @param string $column
      * @return bool
      */
-    protected function valueIsChanged($column)
+    protected function valueIsChanged($column): bool
     {
-        return $this->isNew() || $this->get($column) !== $this->getOld($column);
+        if ($this->isNew()) {
+            return true;
+        }
+
+        return isset($this->_changes[$column]) && $this->get($column) !== $this->getChange($column);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isLoadFromDb(): bool
+    {
+        return $this->loadFromDb;
+    }
+
+    /**
+     * @param bool $value
+     */
+    public function setLoadFromDb($value = true)
+    {
+        $this->loadFromDb = (bool)$value;
     }
 
     /**
      * @return array
      */
-    public function getOldData()
+    public function getOldData(): array
     {
         return $this->_backup;
     }
 
     /**
-     * @param $data
+     * @param array $data
      */
-    public function setOldData($data)
+    public function setOldData(array $data)
     {
         $this->_backup = $data;
     }
 
     /**
-     * @param $column
+     * @param string $column
      * @return mixed
      */
-    public function getOld($column)
+    public function getOld(string $column)
     {
         return $this->_backup[$column] ?? null;
     }
@@ -570,43 +635,34 @@ abstract class RecordModel extends Model
      */
     public function getChanges(): array
     {
-        return $this->changes;
+        return $this->_changes;
     }
 
     /**
-     * @param array $changes
+     * @param array $_changes
      */
-    public function setChanges(array $changes)
+    public function setChanges(array $_changes)
     {
-        $this->changes = $changes;
+        $this->_changes = $_changes;
+    }
+
+    /**
+     * @param string $column
+     * @return mixed
+     */
+    public function getChange(string $column)
+    {
+        return $this->_changes[$column] ?? null;
     }
 
     /**
      * @param string $column
      * @param mixed $value
      */
-    public function setChange($column, $value)
+    public function setChange(string $column, $value)
     {
         if ($this->hasColumn($column)) {
-            $this->changes[$column] = $value;
+            $this->_changes[$column] = $value;
         }
     }
-
-    /***********************************************************************************
-     * helper method
-     ***********************************************************************************/
-
-    /**
-     * apply Append Options
-     * @see self::$defaultOptions
-     * @param  array $options
-     * @param  Query $query
-     * @return Query
-     * @throws UnknownMethodException
-     */
-    public static function applyAppendOptions(array $options = [], Query $query)
-    {
-        return ModelHelper::applyQueryOptions($options, $query);
-    }
-
 }
