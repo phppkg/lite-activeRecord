@@ -9,7 +9,7 @@
 namespace SimpleAR;
 
 use Toolkit\Collection\SimpleCollection;
-use Inhere\LiteDb\ExtendedPdo;
+use Inhere\LiteDb\LitePdo;
 
 /**
  * Class RecordModel
@@ -171,9 +171,9 @@ abstract class LiteRecordModel extends Model
 
     /**
      * the database driver instance
-     * @return ExtendedPdo
+     * @return LitePdo
      */
-    abstract public static function getDb(): ExtendedPdo;
+    abstract public static function getDb(): LitePdo;
 
     /**
      * getTableName
@@ -232,7 +232,7 @@ abstract class LiteRecordModel extends Model
             $options['class'] = static::class;
         }
 
-        $model = static::getDb()->findOne(self::getTableName(), $wheres, $select, $options);
+        $model = static::getDb()->queryOne(self::getTableName(), $wheres, $select, $options);
 
         // use data model
         if ($model && $isModel) {
@@ -259,7 +259,7 @@ abstract class LiteRecordModel extends Model
             $options['class'] = static::class;
         }
 
-        return static::getDb()->findAll(self::getTableName(), $wheres, $select, $options);
+        return static::getDb()->queryAll(self::getTableName(), $wheres, $select, $options);
     }
 
     /***********************************************************************************
@@ -283,10 +283,11 @@ abstract class LiteRecordModel extends Model
 
     /**
      * @return static
+     * @throws \PDOException
      * @throws \InvalidArgumentException
      * @throws \RuntimeException
      */
-    public function insert()
+    public function insert(): self
     {
         // check primary key
         if (!$this->allowInsertPk && $this->pkValue()) {
@@ -296,6 +297,7 @@ abstract class LiteRecordModel extends Model
         $this->beforeInsert();
         $this->beforeSave();
 
+        // validate failure
         if ($this->enableValidate && $this->validate()->fail()) {
             return $this;
         }
@@ -317,6 +319,7 @@ abstract class LiteRecordModel extends Model
      * @param array $updateColumns only update some columns
      * @param bool $updateNulls
      * @return static
+     * @throws \PDOException
      * @throws \RuntimeException
      * @throws \InvalidArgumentException
      */

@@ -45,8 +45,9 @@ class Model extends SimpleCollection
     /**
      * @param string $class
      * @return static
+     * @throws \RuntimeException
      */
-    public static function model($class = '')
+    public static function model(string $class = '')
     {
         $class = $class ?: static::class;
 
@@ -86,7 +87,7 @@ class Model extends SimpleCollection
      * define model field list
      * @return array
      */
-    public function columns()
+    public function columns(): array
     {
         return [
     /*
@@ -101,7 +102,7 @@ class Model extends SimpleCollection
     /**
      * {@inheritDoc}
      */
-    public function translates()
+    public function translates(): array
     {
         return [
             // 'field' => 'translate',
@@ -127,10 +128,10 @@ class Model extends SimpleCollection
 
     /**
      * @param mixed $value
-     * @param type $type
+     * @param string $type
      * @return int
      */
-    protected function convertType($value, $type)
+    protected function convertType($value, string $type): int
     {
         if ($type === Type::INT) {
             $value = (int)$value;
@@ -142,7 +143,7 @@ class Model extends SimpleCollection
     /**
      * @return array
      */
-    public function getColumnsData()
+    public function getColumnsData(): array
     {
         $source = $this->onlySaveSafeData ? $this->getSafeData() : $this;
         $data = [];
@@ -160,7 +161,7 @@ class Model extends SimpleCollection
      * @param string $column
      * @return bool
      */
-    public function hasColumn(string $column)
+    public function hasColumn(string $column): bool
     {
         return isset($this->columns[$column]);
     }
