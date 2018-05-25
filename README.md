@@ -17,8 +17,8 @@
 
 ## Projects
 
-- **github** https://github.com/inhere/php-lite-database.git
-- **gitee** https://gitee.com/inhere/php-lite-database.git
+- **github** https://github.com/inhere/php-simple-activeRecord.git
+- **gitee** https://gitee.com/inhere/php-simple-activeRecord.git
 
 ## Install
 
@@ -41,7 +41,7 @@ composer require inhere/simple-active-record
 - Pull directly
 
 ```bash
-git clone https://github.com/inhere/php-lite-database.git
+git clone https://github.com/inhere/php-simple-activeRecord.git
 ```
 
 ## 如何使用

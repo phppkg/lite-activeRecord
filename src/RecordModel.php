@@ -15,9 +15,9 @@ use Inhere\LiteDb\LitePdo;
  * Class RecordModel
  * @package SimpleAR
  */
-abstract class RecordModel extends Model implements RecordModelInterface
+abstract class RecordModel extends SimpleCollection implements RecordModelInterface
 {
-    // use RecordModelTrait;
+    use ModelTrait;
 
     /**
      * @var array Data backup
@@ -177,7 +177,6 @@ abstract class RecordModel extends Model implements RecordModelInterface
             // 'update' => ['username', 'email','createTime'],
         ];
     }
-
 
     /***********************************************************************************
      * find operation
