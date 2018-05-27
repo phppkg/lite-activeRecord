@@ -153,7 +153,8 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     {
         parent::__construct($items);
 
-        $this->scene = trim($scene);
+        $this->scene = \trim($scene);
+        $this->columns = $this->columns();
 
         if (!$this->getColumns()) {
             throw new \InvalidArgumentException('Must define method columns() and cannot be empty.');

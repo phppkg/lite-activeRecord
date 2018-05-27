@@ -9,6 +9,8 @@
 namespace SimpleAR;
 
 use Inhere\Validate\ValidationTrait;
+use Toolkit\Collection\SimpleCollection;
+use Toolkit\PhpUtil\Type;
 
 /**
  * Trait ModelTrait
@@ -69,16 +71,6 @@ trait ModelTrait
     public static function load($data)
     {
         return new static($data);
-    }
-
-    /**
-     * @param array $items
-     */
-    public function __construct(array $items = [])
-    {
-        parent::__construct($items);
-
-        $this->columns = $this->columns();
     }
 
     /**

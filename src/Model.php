@@ -17,4 +17,15 @@ use Toolkit\Collection\SimpleCollection;
 class Model extends SimpleCollection
 {
     use ModelTrait;
+
+    /**
+     * @param array $items
+     */
+    public function __construct(array $items = [])
+    {
+        parent::__construct($items);
+
+        $this->columns = $this->columns();
+    }
+
 }
