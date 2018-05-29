@@ -191,7 +191,6 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      * @param  string|array $select
      * @param  array $options
      * @return static
-     * @throws \PDOException
      * @throws \InvalidArgumentException
      */
     public static function findByPk($pkValue, string $select = '*', array $options = [])
@@ -212,7 +211,6 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      * @param string|array $select
      * @param array $options
      * @return static
-     * @throws \PDOException
      * @throws \InvalidArgumentException
      */
     public static function findOne($wheres, string $select = '*', array $options = [])
@@ -274,7 +272,6 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
 
     /**
      * @return static
-     * @throws \PDOException
      * @throws \InvalidArgumentException
      * @throws \RuntimeException
      */
@@ -300,6 +297,8 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
 
             $this->afterInsert();
             $this->afterSave();
+        } else {
+            $this->addError('data-insert', 'create new record is failure');
         }
 
         return $this;
@@ -310,7 +309,6 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      * @param array $updateColumns only update some columns
      * @param bool $updateNulls
      * @return static
-     * @throws \PDOException
      * @throws \RuntimeException
      * @throws \InvalidArgumentException
      */
@@ -368,15 +366,18 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
         // only exec on the data is not empty.
         if ($data) {
             $result = static::getDb()->update(self::getTableName(), [$pkName => $pkValue], $data);
+
+            if ($result) {
+                $this->_changes = []; // reset
+                $this->afterUpdate();
+                $this->afterSave();
+            } else {
+                $this->addError('data-update', 'update a record is failure');
+            }
+
+            unset($data);
         }
 
-        if ($result) {
-            $this->_changes = []; // reset
-            $this->afterUpdate();
-            $this->afterSave();
-        }
-
-        unset($data);
         return $this;
     }
 
@@ -387,7 +388,6 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     /**
      * delete by model
      * @return int
-     * @throws \PDOException
      * @throws \InvalidArgumentException
      */
     public function delete(): int
@@ -408,7 +408,6 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     /**
      * @param int|array $pkValue
      * @return int
-     * @throws \PDOException
      * @throws \InvalidArgumentException
      */
     public static function deleteByPk($pkValue): int
@@ -427,7 +426,6 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     /**
      * @param mixed $wheres
      * @return int
-     * @throws \PDOException
      * @throws \InvalidArgumentException
      */
     public static function deleteBy($wheres): int
