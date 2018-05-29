@@ -207,7 +207,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
 
     /**
      * find a record by where condition
-     * @param mixed $wheres
+     * @param mixed $wheres {@see \Inhere\LiteDb\Helper\DBHelper::handleConditions() }
      * @param string|array $select
      * @param array $options
      * @return static
@@ -233,11 +233,10 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     }
 
     /**
-     * @param mixed $wheres {@see self::handleConditions() }
+     * @param mixed $wheres {@see \Inhere\LiteDb\Helper\DBHelper::handleConditions() }
      * @param string|array $select
      * @param array $options
      * @return array
-     * @throws \PDOException
      * @throws \InvalidArgumentException
      */
     public static function findAll($wheres, string $select = '*', array $options = []): array
@@ -249,6 +248,16 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
         }
 
         return static::getDb()->queryAll(self::getTableName(), $wheres, $select, $options);
+    }
+
+    /**
+     * @param mixed $wheres {@see \Inhere\LiteDb\Helper\DBHelper::handleConditions() }
+     * @return int
+     * @throws \InvalidArgumentException
+     */
+    public static function counts($wheres = null): int
+    {
+        return static::getDb()->count(self::getTableName(), $wheres);
     }
 
     /***********************************************************************************
@@ -322,7 +331,6 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
         $this->beforeUpdate();
         $this->beforeSave();
 
-        $result = true;
         $pkName = static::$pkName;
         $validateColumns = $updateColumns;
 
