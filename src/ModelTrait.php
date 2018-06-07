@@ -38,7 +38,10 @@ trait ModelTrait
 
     /**
      * The columns of the model
-     * @var array
+     * @var array[]
+     * [
+     *  'field' => [type, length],
+     * ]
      */
     private $columns;
 
@@ -65,29 +68,18 @@ trait ModelTrait
     }
 
     /**
-     * @param $data
-     * @return static
-     */
-    public static function load($data)
-    {
-        return new static($data);
-    }
-
-    /**
      * define model field list
      * @return array
      */
-    public function columns(): array
-    {
+    abstract public function columns(): array;
+    /*{
         return [
-            /*
-                   // column => type
-                   'id'          => 'int',
-                   'title'       => 'string',
-                   'createTime'  => 'int',
-             */
+            // column => [type, length, ...]
+           'id'          => ['int', 11],
+           'title'       => ['string', 64],
+           'createTime'  => ['int', 10],
         ];
-    }
+    }*/
 
     /**
      * {@inheritDoc}
@@ -110,7 +102,7 @@ trait ModelTrait
     {
         // belong to the model.
         if (isset($this->columns[$column])) {
-            $value = $this->convertType($value, $this->columns[$column]);
+            $value = $this->convertType($value, $this->columns[$column][0]);
         }
 
         return parent::set($column, $value);

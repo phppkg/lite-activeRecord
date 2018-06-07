@@ -18,60 +18,56 @@ use Toolkit\Collection\SimpleCollection;
 abstract class MongoModel extends SimpleCollection implements RecordModelInterface
 {
     use ModelTrait;
-    
+
     /**
      * @var string The collection name
      */
-    private static $collectionName;
-    
+    private $collectionName;
+
     /**
      * the database driver instance
      * @return LiteMongo
      */
     abstract public static function getDb(): LiteMongo;
-    
+
     /**
-     * @param $data
+     * @param array $data
      * @param string $scene
      * @return static
      * @throws \InvalidArgumentException
      */
-    public static function load($data, $scene = '')
+    public static function load(array $data, string $scene = '')
     {
         return new static($data, $scene);
     }
-    
+
     /**
      * @return string
      */
     public static function tableName(): string
     {
         // default is current class name
-        $name = lcfirst(basename(str_replace('\\', '/', static::class)));
+        $name = \lcfirst(\basename(\str_replace('\\', '/', static::class)));
         if (\substr($name, -5) === 'Model') {
             $name = \substr($name, 0, -5);
         }
+
         // '{@pfx}' -- is table prefix placeholder
         // return '{@pfx}articles';
         // if no table prefix
         // return 'articles';
         return '{@pfx}' . $name;
     }
-    
+
     /**
      * get collection name
      * @return string
      */
     final public static function collectionName(): string
     {
-        if (!self::$collectionName) {
-            self::$collectionName = static::tableName();
-        }
-        
-        return self::$collectionName;
+        return static::tableName();
     }
-    
-    
+
     /**
      * RecordModel constructor.
      * @param array $items
@@ -81,14 +77,22 @@ abstract class MongoModel extends SimpleCollection implements RecordModelInterfa
     public function __construct(array $items = [], string $scene = '')
     {
         parent::__construct($items);
-        
+
         $this->scene = \trim($scene);
         $this->columns = $this->columns();
-        
+
         if (!$this->getColumns()) {
             throw new \InvalidArgumentException('Must define method columns() and cannot be empty.');
         }
-        
-        self::collectionName();
+
+        $this->collectionName = static::tableName();
+    }
+
+    /**
+     * @return string
+     */
+    public function getCollectionName(): string
+    {
+        return $this->collectionName;
     }
 }

@@ -30,19 +30,19 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     private $_changes = [];
 
     /**
-     * @var string The table primary key name
+     * @var string The table primary key name. default is 'id'
      */
-    protected static $pkName = 'id';
+    private $pkField;
+
+    /**
+     * @var string The table name
+     */
+    private $tableName;
 
     /**
      * @var string Current table name alias 'mt' -- main table
      */
     protected static $aliasName = 'mt';
-
-    /**
-     * @var string The table name
-     */
-    private static $tableName;
 
     /**
      * @var array
@@ -88,9 +88,17 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      * @return static
      * @throws \InvalidArgumentException
      */
-    public static function load($data, $scene = '')
+    public static function load($data, string $scene = '')
     {
         return new static($data, $scene);
+    }
+
+    /**
+     * @return string
+     */
+    public static function pkField(): string
+    {
+        return 'id';
     }
 
     /**
@@ -99,7 +107,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     public static function tableName(): string
     {
         // default is current class name
-        $name = lcfirst(basename(str_replace('\\', '/', static::class)));
+        $name = \lcfirst(\basename(\str_replace('\\', '/', static::class)));
 
         if (\substr($name, -5) === 'Model') {
             $name = \substr($name, 0, -5);
@@ -119,9 +127,9 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      */
     final public static function queryName(): string
     {
-        self::getTableName();
+        $table = static::tableName();
 
-        return static::$aliasName ? self::$tableName . ' AS ' . static::$aliasName : self::$tableName;
+        return static::$aliasName ? $table . ' AS ' . static::$aliasName : $table;
     }
 
     /**
@@ -129,19 +137,6 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      * @return LitePdo
      */
     abstract public static function getDb(): LitePdo;
-
-    /**
-     * getTableName
-     * @return string
-     */
-    final public static function getTableName(): string
-    {
-        if (!self::$tableName) {
-            self::$tableName = static::tableName();
-        }
-
-        return self::$tableName;
-    }
 
     /**
      * RecordModel constructor.
@@ -160,7 +155,8 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
             throw new \InvalidArgumentException('Must define method columns() and cannot be empty.');
         }
 
-        self::getTableName();
+        $this->pkField = static::pkField();
+        $this->tableName = static::tableName();
     }
 
     /***********************************************************************************
@@ -183,6 +179,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      * find operation
      ***********************************************************************************/
 
+    /** @var bool */
     private $loadFromDb = false;
 
     /**
@@ -196,10 +193,10 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     public static function findByPk($pkValue, string $select = '*', array $options = [])
     {
         // only one
-        $wheres = [static::$pkName => $pkValue];
+        $wheres = [static::pkField() => $pkValue];
 
         if (\is_array($pkValue)) {// many
-            $wheres = [static::$pkName, 'IN', $pkValue];
+            $wheres = [static::pkField(), 'IN', $pkValue];
         }
 
         return static::findOne($wheres, $select, $options);
@@ -221,7 +218,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
             $options['class'] = static::class;
         }
 
-        $model = static::getDb()->queryOne(self::getTableName(), $wheres, $select, $options);
+        $model = static::getDb()->queryOne(static::tableName(), $wheres, $select, $options);
 
         // use data model
         if ($model && $isModel) {
@@ -247,7 +244,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
             $options['class'] = static::class;
         }
 
-        return static::getDb()->queryAll(self::getTableName(), $wheres, $select, $options);
+        return static::getDb()->queryAll(static::tableName(), $wheres, $select, $options);
     }
 
     /**
@@ -257,7 +254,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      */
     public static function counts($wheres = null): int
     {
-        return static::getDb()->count(self::getTableName(), $wheres);
+        return static::getDb()->count(static::tableName(), $wheres);
     }
 
     /***********************************************************************************
@@ -300,8 +297,8 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
         }
 
         // when insert successful.
-        if ($pkValue = static::getDb()->insert(self::getTableName(), $this->getColumnsData())) {
-            $this->set(static::$pkName, $pkValue);
+        if ($pkValue = static::getDb()->insert(static::tableName(), $this->getColumnsData())) {
+            $this->set($this->pkField, $pkValue);
             $this->setLoadFromDb();
 
             $this->afterInsert();
@@ -331,12 +328,12 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
         $this->beforeUpdate();
         $this->beforeSave();
 
-        $pkName = static::$pkName;
+        $pkField = $this->pkField;
         $validateColumns = $updateColumns;
 
         // the primary column is must be exists for defined validate.
-        if ($validateColumns && !\in_array($pkName, $validateColumns, true)) {
-            $validateColumns[] = $pkName;
+        if ($validateColumns && !\in_array($pkField, $validateColumns, true)) {
+            $validateColumns[] = $pkField;
         }
 
         // validate data
@@ -369,11 +366,11 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
             }
         }
 
-        unset($data[$pkName]);
+        unset($data[$pkField]);
 
         // only exec on the data is not empty.
         if ($data) {
-            $result = static::getDb()->update(self::getTableName(), [$pkName => $pkValue], $data);
+            $result = static::getDb()->update(static::tableName(), [$pkField => $pkValue], $data);
 
             if ($result) {
                 $this->_changes = []; // reset
@@ -421,11 +418,11 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     public static function deleteByPk($pkValue): int
     {
         // only one
-        $where = [static::$pkName => $pkValue];
+        $where = [static::pkField() => $pkValue];
 
         // many
         if (\is_array($pkValue)) {
-            $where = [static::$pkName, 'IN', $pkValue];
+            $where = [static::pkField(), 'IN', $pkValue];
         }
 
         return self::deleteBy($where);
@@ -438,7 +435,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      */
     public static function deleteBy($wheres): int
     {
-        return static::getDb()->delete(self::getTableName(), $wheres);
+        return static::getDb()->delete(static::tableName(), $wheres);
     }
 
     /***********************************************************************************
@@ -549,7 +546,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      */
     public function isNew(): bool
     {
-        return !$this->get(static::$pkName, false);
+        return !$this->get(static::pkField(), false);
     }
 
     /**
@@ -570,7 +567,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      */
     public function pkName()
     {
-        return static::$pkName;
+        return static::pkField();
     }
 
     /**
@@ -578,7 +575,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      */
     public function pkValue()
     {
-        return $this->get(static::$pkName);
+        return $this->get($this->pkField);
     }
 
     /**
@@ -670,5 +667,22 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
         if ($this->hasColumn($column)) {
             $this->_changes[$column] = $value;
         }
+    }
+
+    /**
+     * @return string
+     */
+    public function getPkField(): string
+    {
+        return $this->pkField;
+    }
+
+    /**
+     * getTableName
+     * @return string
+     */
+    final public function getTableName(): string
+    {
+        return $this->tableName;
     }
 }
