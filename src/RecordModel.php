@@ -218,7 +218,13 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
             $options['class'] = static::class;
         }
 
-        $model = static::getDb()->queryOne(static::tableName(), $wheres, $select, $options);
+        $table = static::tableName();
+
+        if ($alias = $options['tableAlias'] ?? null) {
+            $table .= ' AS ' . $alias;
+        }
+
+        $model = static::getDb()->queryOne($table, $wheres, $select, $options);
 
         // use data model
         if ($model && $isModel) {
@@ -244,7 +250,13 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
             $options['class'] = static::class;
         }
 
-        return static::getDb()->queryAll(static::tableName(), $wheres, $select, $options);
+        $table = static::tableName();
+
+        if ($alias = $options['tableAlias'] ?? null) {
+            $table .= ' AS ' . $alias;
+        }
+
+        return static::getDb()->queryAll($table, $wheres, $select, $options);
     }
 
     /**
