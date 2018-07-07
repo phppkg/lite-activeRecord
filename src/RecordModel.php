@@ -269,6 +269,14 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
         return static::getDb()->count(static::tableName(), $wheres);
     }
 
+    /**
+     * @param $where
+     */
+    public static function exists($where)
+    {
+        // return static::getDb()->dd($query)->exists();
+    }
+
     /***********************************************************************************
      * create/update operation
      ***********************************************************************************/
@@ -398,6 +406,21 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
         return $this;
     }
 
+    /**
+     * @param $pkValue
+     * @param array $data
+     * @return array|int
+     * @throws \InvalidArgumentException
+     */
+    public static function updateByPk($pkValue, array $data)
+    {
+        return static::getDb()->update(
+            static::tableName(),
+            [static::pkField() => $pkValue],
+            $data
+        );
+    }
+
     /***********************************************************************************
      * delete operation
      ***********************************************************************************/
@@ -497,6 +520,64 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     /***********************************************************************************
      * extra operation
      ***********************************************************************************/
+
+    /**
+     * @param $column
+     * @param int $step
+     * @return bool
+     * @throws \InvalidArgumentException
+     */
+    public function increment(string $column, int $step = 1): bool
+    {
+        $priKey = static::pkField();
+
+        if (!\is_int($this->$column)) {
+            throw new \InvalidArgumentException('The method only can be used in the column of type integer');
+        }
+
+        $this->$column += $step;
+
+        $data = [
+            $priKey => $this->get($priKey),
+            $column => $this->$column,
+        ];
+
+        return static::getDb()->update(static::tableName(), $data, $priKey);
+    }
+
+    public function incre(string $column, int $step = 1)
+    {
+        return $this->increment($column, $step);
+    }
+
+    /**
+     * @param $column
+     * @param int $step
+     * @return bool
+     * @throws \InvalidArgumentException
+     */
+    public function decrement($column, $step = -1): bool
+    {
+        $priKey = static::pkField();
+
+        if (!\is_int($this->$column)) {
+            throw new \InvalidArgumentException('The method only can be used in the column of type integer');
+        }
+
+        $this->$column += (int)$step;
+
+        $data = [
+            $priKey => $this->get($priKey),
+            $column => $this->$column,
+        ];
+
+        return static::getDb()->update(static::tableName(), $data, $priKey);
+    }
+
+    public function decre($column, $step = -1)
+    {
+        return $this->decrement($column, $step);
+    }
 
     protected function beforeInsert(): bool
     {
