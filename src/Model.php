@@ -6,13 +6,13 @@
  * Time: 23:35
  */
 
-namespace SimpleAR;
+namespace PhpComp\LiteActiveRecord;
 
 use Toolkit\Collection\SimpleCollection;
 
 /**
  * Class Model
- * @package SimpleAR\Model
+ * @package PhpComp\LiteActiveRecord\Model
  */
 class Model extends SimpleCollection
 {

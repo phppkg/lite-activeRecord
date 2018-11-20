@@ -18,7 +18,7 @@ $versions = GitVersionCollection::create(__DIR__);
 return new Sami($iterator, [
   // 'theme'                => 'enhanced',
   // 'versions' => $versions,
-  'title' => 'Inhere SimpleAR Classes Documentation',
+  'title' => 'Inhere PhpComp\LiteActiveRecord Classes Documentation',
   'build_dir' => __DIR__ . '/classes/%version%',
   'cache_dir' => __DIR__ . '/caches/%version%',
   'default_opened_level' => 1,

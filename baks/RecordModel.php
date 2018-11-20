@@ -6,16 +6,16 @@
  * Time: 下午4:13
  */
 
-namespace SimpleAR\Bak;
+namespace PhpComp\LiteActiveRecord\Bak;
 
 use Inhere\Library\Helpers\Arr;
-use SimpleAR\Database\AbstractDriver;
-use SimpleAR\Helpers\ModelHelper;
+use PhpComp\LiteActiveRecord\Database\AbstractDriver;
+use PhpComp\LiteActiveRecord\Helpers\ModelHelper;
 use Windwalker\Query\Query;
 
 /**
  * Class RecordModel
- * @package SimpleAR
+ * @package PhpComp\LiteActiveRecord
  */
 abstract class RecordModel extends Model
 {

@@ -6,7 +6,7 @@
  * Time: 21:35
  */
 
-namespace SimpleAR;
+namespace PhpComp\LiteActiveRecord;
 
 /**
  * Class SimpleDb

@@ -8,17 +8,16 @@
          convertNoticesToExceptions="true"
          convertWarningsToExceptions="true"
          stopOnFailure="false"
-         syntaxCheck="false"
 >
-    <testsuites>
-        <testsuite name="Simple Active Record Test Suite">
-            <directory>./tests/</directory>
-        </testsuite>
-    </testsuites>
+  <testsuites>
+    <testsuite name="Simple Active Record Test Suite">
+      <directory>./tests/</directory>
+    </testsuite>
+  </testsuites>
 
-    <filter>
-        <whitelist>
-            <directory suffix=".php">./examples</directory>
-        </whitelist>
-    </filter>
+  <filter>
+    <whitelist>
+      <directory suffix=".php">./examples</directory>
+    </whitelist>
+  </filter>
 </phpunit>

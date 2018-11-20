@@ -6,14 +6,14 @@
  * Time: 下午4:13
  */
 
-namespace SimpleAR\Bak;
+namespace PhpComp\LiteActiveRecord\Bak;
 
-use SimpleAR\Database\AbstractDriver;
-use SimpleAR\Helpers\ModelHelper;
+use PhpComp\LiteActiveRecord\Database\AbstractDriver;
+use PhpComp\LiteActiveRecord\Helpers\ModelHelper;
 
 /**
  * Class RecordModelExtraTrait
- * @package SimpleAR
+ * @package PhpComp\LiteActiveRecord
  * @method static RecordModel load()
  * @method static AbstractDriver getDb()
  * @method static AbstractDriver setQuery()

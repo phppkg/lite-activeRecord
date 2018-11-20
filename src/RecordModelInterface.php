@@ -6,11 +6,11 @@
  * Time: 00:06
  */
 
-namespace SimpleAR;
+namespace PhpComp\LiteActiveRecord;
 
 /**
  * Interface RecordModelInterface
- * @package SimpleAR
+ * @package PhpComp\LiteActiveRecord
  */
 interface RecordModelInterface
 {

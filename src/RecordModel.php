@@ -6,14 +6,14 @@
  * Time: 下午4:13
  */
 
-namespace SimpleAR;
+namespace PhpComp\LiteActiveRecord;
 
-use Toolkit\Collection\SimpleCollection;
 use Inhere\LiteDb\LitePdo;
+use Toolkit\Collection\SimpleCollection;
 
 /**
- * Class RecordModel
- * @package SimpleAR
+ * Class RecordModel - active record model
+ * @package PhpComp\LiteActiveRecord
  */
 abstract class RecordModel extends SimpleCollection implements RecordModelInterface
 {
@@ -38,6 +38,11 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      * @var string The table name
      */
     private $tableName;
+
+    /**
+     * @var LitePdo
+     */
+    private static $db;
 
     /**
      * @var string Current table name alias 'mt' -- main table
@@ -133,10 +138,21 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
     }
 
     /**
-     * the database driver instance
+     * @param LitePdo $db
+     */
+    public static function setDb(LitePdo $db)
+    {
+        self::$db = $db;
+    }
+
+    /**
+     * return the database driver instance
      * @return LitePdo
      */
-    abstract public static function getDb(): LitePdo;
+    public static function getDb(): LitePdo
+    {
+        return self::$db;
+    }
 
     /**
      * RecordModel constructor.
@@ -164,7 +180,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
      ***********************************************************************************/
 
     /**
-     * TODO 定义保存数据时,当前场景允许写入的属性字段
+     * 定义保存数据时,当前场景允许写入的属性字段
      * @return array
      */
     public function scenarios(): array
@@ -204,7 +220,7 @@ abstract class RecordModel extends SimpleCollection implements RecordModelInterf
 
     /**
      * find a record by where condition
-     * @param mixed $wheres {@see \Inhere\LiteDb\Helper\DBHelper::handleConditions() }
+     * @param mixed $wheres {@see \Inhere\LiteDb\Helper\DbHelper::handleConditions() }
      * @param string|array $select
      * @param array $options
      * @return static

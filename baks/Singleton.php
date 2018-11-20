@@ -6,13 +6,13 @@
  * Time: 22:02
  */
 
-namespace SimpleAR\Connections;
+namespace PhpComp\LiteActiveRecord\Connections;
 
 use Inhere\Exceptions\UnknownCalledException;
 
 /**
  * Class Singleton
- * @package SimpleAR\Connections
+ * @package PhpComp\LiteActiveRecord\Connections
  * ```
  * $client = new Singleton($config);
  * ```

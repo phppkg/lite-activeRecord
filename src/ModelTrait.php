@@ -6,7 +6,7 @@
  * Time: 02:10
  */
 
-namespace SimpleAR;
+namespace PhpComp\LiteActiveRecord;
 
 use Inhere\Validate\ValidationTrait;
 use Toolkit\Collection\SimpleCollection;
@@ -14,7 +14,7 @@ use Toolkit\PhpUtil\Type;
 
 /**
  * Trait ModelTrait
- * @package SimpleAR
+ * @package PhpComp\LiteActiveRecord
  */
 trait ModelTrait
 {

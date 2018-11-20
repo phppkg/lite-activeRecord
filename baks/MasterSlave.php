@@ -6,11 +6,11 @@
  * Time: 22:02
  */
 
-namespace SimpleAR\Connections;
+namespace PhpComp\LiteActiveRecord\Connections;
 
 /**
  * Class MasterSlave
- * @package SimpleAR\Connections
+ * @package PhpComp\LiteActiveRecord\Connections
  *
  * ```
  * $config = [

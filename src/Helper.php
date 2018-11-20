@@ -6,11 +6,11 @@
  * Time: 上午11:33
  */
 
-namespace SimpleAR;
+namespace PhpComp\LiteActiveRecord;
 
 /**
  * Class DbHelper
- * @package SimpleAR
+ * @package PhpComp\LiteActiveRecord
  */
 class Helper
 {

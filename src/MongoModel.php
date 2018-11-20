@@ -6,14 +6,14 @@
  * Time: 11:42
  */
 
-namespace SimpleAR;
+namespace PhpComp\LiteActiveRecord;
 
 use Inhere\LiteDb\LiteMongo;
 use Toolkit\Collection\SimpleCollection;
 
 /**
  * Class MongoModel
- * @package SimpleAR
+ * @package PhpComp\LiteActiveRecord
  */
 abstract class MongoModel extends SimpleCollection implements RecordModelInterface
 {
