@@ -93,6 +93,7 @@ class User extends RecordModel
         return [
             // ['body', 'string'],
             // ['id, createTime', 'int'],
+        }
     }
 }
 ```
